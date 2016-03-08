@@ -39,9 +39,19 @@ public class FlowClientToProxyConnectionHandler extends ClientConnHandlerAdapter
 
     @Override
     public void messageReceive(IConnectionHandlerContext ctx, Object... objects) {
-        HttpRequest httpRequest = (HttpRequest)objects[0];
-        doReadHttpInitial(ctx, httpRequest);
-        super.messageReceive(ctx, objects);
+        if (objects == null && objects.length < 2)
+            return;
+        if (objects[1] instanceof HttpRequest) {
+            HttpRequest httpRequest = (HttpRequest) objects[1];
+            ConnectionState connectionState = doReadHttpInitial(ctx, httpRequest);
+            ctx.clientToProxyConnection().becomeState(connectionState);
+            super.messageReceive(ctx, objects);
+        } else if (objects[1] instanceof LastHttpContent) {
+            LastHttpContent httpContent = (LastHttpContent) objects[1];
+            logger.debug("LastHttpContent {}", httpContent);
+        } else {
+            super.messageReceive(ctx, objects);
+        }
     }
 
     protected ConnectionState doReadHttpInitial(IConnectionHandlerContext ctx, HttpRequest httpRequest) {
@@ -100,23 +110,20 @@ public class FlowClientToProxyConnectionHandler extends ClientConnHandlerAdapter
 
         }
 
-        ctx.connection().writeDataToChannel(httpObject);
+        ctx.clientToProxyConnection().writeDataToChannel(httpObject);
 
         if (SocksHttpProxyUtils.isLastChunk(httpObject)) {
-            ctx.connection().writeDataToChannel(Unpooled.EMPTY_BUFFER);
+            ctx.clientToProxyConnection().writeDataToChannel(Unpooled.EMPTY_BUFFER);
         }
     }
 
     @Override
     public void readRaw(IConnectionHandlerContext ctx, ByteBuf buf) {
-        super.readRaw(ctx, buf);
+        ctx.clientToProxyConnection().writeDataToChannel(buf);
     }
 
     @Override
     public void serverConnectedSucc(IConnectionHandlerContext ctx, Object ...object) {
-        if (ctx.connection() instanceof DefaultClientToProxyConnection) {
-            ((DefaultClientToProxyConnection)ctx.connection()).serverConnectionSucceeded((Boolean) object[0]);
-        }
         super.serverConnectedSucc(ctx, object);
     }
 

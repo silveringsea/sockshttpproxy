@@ -19,8 +19,8 @@ public class SocketHttpProxyMain {
         bootstrap.withConnInitializer(new ConnectionInitializer() {
               @Override
               public IConnectionPipeline initPipline(IConnectionPipeline cp) throws Exception {
-                  cp.addFirst(new FlowClientToProxyConnectionHandler());
-                  cp.addFirst(new FlowProxyToServerConnectionHandler());
+                  cp.addLast(new FlowClientToProxyConnectionHandler());
+                  cp.addLast(new FlowProxyToServerConnectionHandler());
                   return cp;
               }
         });

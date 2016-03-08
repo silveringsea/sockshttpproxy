@@ -17,6 +17,7 @@ public class CliMain {
 
     String commandStr;
     List<String> cmdOptions;
+    protected SocksHttpProxyServer proxyServer;
     protected HashMap<Integer,String> history = new HashMap<Integer,String>( );
 
     public static void main(String[] args) throws InterruptedException {
@@ -98,21 +99,7 @@ public class CliMain {
             BufferedReader reader = new BufferedReader(in);
             String line;
             try {
-
-//                ConsoleReader consoleReader = new ConsoleReader();
-////                consoleReader.addCompleter()
-//                consoleReader.addTriggeredAction((char)72, new ActionListener() {
-//                    public void actionPerformed(ActionEvent e) {
-//                        System.out.println("key up press");
-//                    }
-//                });
                 while (true) {
-//                    hisFlag = scanner.nextInt();
-//                    System.out.println(hisFlag);
-//                    reader.mark(0);
-//                    hisFlag = reader.read();
-//                    reader.reset();
-//                    hisFlag = consoleReader.readCharacter();
                     if ((line = reader.readLine()) != null) {
                         executeCommand(line);
                     }

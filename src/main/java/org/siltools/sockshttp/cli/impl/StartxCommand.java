@@ -19,7 +19,11 @@ public class StartxCommand extends AbstractCliCommand {
 
     @Override
     public boolean exec() throws Exception {
-        Runtime.getRuntime().exec("python socks-gui.py");
+//        StartXUtils.getInstance().startX(null);
+        final Process p = Runtime.getRuntime().exec("python socks-gui.py");
+        ProcessBuilder builder = new ProcessBuilder("python", "socks-gui.py");
+        builder.start();
+//        System.out.println(v);
         return true;
     }
 

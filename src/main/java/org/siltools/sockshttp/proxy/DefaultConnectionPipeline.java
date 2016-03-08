@@ -2,7 +2,6 @@ package org.siltools.sockshttp.proxy;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.http.HttpRequest;
 import io.netty.util.concurrent.Future;
 import io.netty.util.internal.StringUtil;
 import org.siltools.sockshttp.SocksHttpProxyServer;
@@ -34,6 +33,8 @@ public class DefaultConnectionPipeline implements IConnectionPipeline {
     public DefaultConnectionPipeline(SocksHttpProxyServer socksHttpProxyServer) {
         head = new EmptyConnectionContext(this, HEAD_CONTEXT);
         tail = new EmptyConnectionContext(this, TAIL_CONTEXT);
+        head.next = tail;
+        tail.prev = head;
         this.socksHttpProxyServer = socksHttpProxyServer;
     }
 
@@ -253,7 +254,7 @@ public class DefaultConnectionPipeline implements IConnectionPipeline {
     }
 
     public IConnectionPipeline fireReadRaw(Object... objects) {
-        tail.fireReadRaw(objects);
+        tail.fireReadRaw(objects[0]);
         return this;
     }
 
@@ -271,6 +272,10 @@ public class DefaultConnectionPipeline implements IConnectionPipeline {
     public IConnectionPipeline fireServerConnectedFail(Object... objects) {
         tail.fireServerConnectedFail(objects);
         return this;
+    }
+
+    public Future<InetSocketAddress> fireRemoteInetSocketAddress(Object... objects) {
+        return head.fireRemoteInetSocketAddress(objects);
     }
 
     public List<String> names() {
@@ -387,97 +392,75 @@ public class DefaultConnectionPipeline implements IConnectionPipeline {
             super(pipeline, name, SKIP_FLAGS);
         }
 
-        @Skip
-        public void initChannelPipeline(IConnectionHandlerContext ctx, ChannelPipeline channelPipeline, int connectionType) {
-
-        }
-
-        @Skip
-        public void messageReceive(IConnectionHandlerContext ctx, Object... objects) {
-
-        }
-
-        @Skip
-        public void proxyStateChange(IConnectionHandlerContext ctx, Object... objects) {
-
-        }
-
-        @Skip
-        public void readHTTPChunk(IConnectionHandlerContext ctx, Object... chunk) {
-
-        }
-
-        @Skip
-        public void readRaw(IConnectionHandlerContext ctx, ByteBuf buf) {
-
-        }
-
-        @Skip
-        public void serverConnectedSucc(IConnectionHandlerContext ctx, Object... object) {
-
-        }
-
-        @Skip
-        public void serverConnectedFail(IConnectionHandlerContext ctx, Object... objects) {
-
-        }
-
-        @Skip
-        public void inboundExceptionCaught(IConnectionHandlerContext ctx, Throwable cause) throws Exception {
-
-        }
-
-        @Skip
-        public void outboundExceptionCaught(IConnectionHandlerContext ctx, Throwable cause) throws Exception {
-
-        }
-
-        @Skip
-        public void clientConnectTimeout(IConnectionHandlerContext ctx, Throwable cause) {
-
-        }
-
-        @Skip
-        public Future<InetSocketAddress> remoteInetSocketAddress(IConnectionHandlerContext ctx, HttpRequest httpRequest) {
-            return null;
-        }
-
-        @Skip
-        public boolean shouldExecuteOnEventLoop(int stepFlag) {
-            return false;
-        }
-
-        @Skip
-        public int connectionType() {
-            return 0;
-        }
-
-        @Skip
-        public String getName() {
-            return null;
-        }
-
-        @Skip
         public IProxyConnection connection() {
             return null;
         }
 
-        @Skip
         public IProxyConnection connectionSibling() {
             return null;
         }
 
-        @Skip
         public void connection(IProxyConnection connection) {
 
         }
 
-        @Skip
         public IConnectionHandler handler() {
-            return null;
+            return this;
         }
-        @Skip
-        public Future<InetSocketAddress> fireRemoteInetSocketAddress(HttpRequest initialHttpRequest) {
+
+        public String getName() {
+            return this.name;
+        }
+
+        public boolean shouldExecuteOnEventLoop(int stepFlag) {
+            return false;
+        }
+
+        public int connectionType() {
+            return 0;
+        }
+
+        public void initChannelPipeline(IConnectionHandlerContext ctx, ChannelPipeline channelPipeline, int connectionType) {
+
+        }
+
+        public void messageReceive(IConnectionHandlerContext ctx, Object... objects) {
+
+        }
+
+        public void proxyStateChange(IConnectionHandlerContext ctx, Object... objects) {
+
+        }
+
+        public void readHTTPChunk(IConnectionHandlerContext ctx, Object... chunk) {
+
+        }
+
+        public void readRaw(IConnectionHandlerContext ctx, ByteBuf buf) {
+
+        }
+
+        public void serverConnectedSucc(IConnectionHandlerContext ctx, Object... object) {
+
+        }
+
+        public void serverConnectedFail(IConnectionHandlerContext ctx, Object... objects) {
+
+        }
+
+        public void inboundExceptionCaught(IConnectionHandlerContext ctx, Throwable cause) throws Exception {
+
+        }
+
+        public void outboundExceptionCaught(IConnectionHandlerContext ctx, Throwable cause) throws Exception {
+
+        }
+
+        public void clientConnectTimeout(IConnectionHandlerContext ctx, Throwable cause) {
+
+        }
+
+        public Future<InetSocketAddress> remoteInetSocketAddress(IConnectionHandlerContext ctx, Object... objects) {
             return null;
         }
     }

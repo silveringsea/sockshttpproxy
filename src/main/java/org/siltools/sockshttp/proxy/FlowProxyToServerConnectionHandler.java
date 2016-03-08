@@ -3,13 +3,16 @@ package org.siltools.sockshttp.proxy;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpRequestEncoder;
+import io.netty.handler.codec.http.*;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
+import org.apache.commons.lang3.StringUtils;
+import org.siltools.sockshttp.base.ResultFuture;
 import org.siltools.sockshttp.def.ConnectionState;
 import org.siltools.sockshttp.def.TransportProtocol;
 import org.siltools.sockshttp.def.exception.UnknownTransportProtocolException;
@@ -38,27 +41,42 @@ public class FlowProxyToServerConnectionHandler extends ProxyConnHandlerAdapter 
                 "idle",
                 new IdleStateHandler(0, 0, ctx.pipeline().proxyServer()
                         .getIdleConnectionTimeout()));
-        channelPipeline.addLast("handler", (ChannelHandler)ctx.proxyToServerConnection());
+        channelPipeline.addLast("proxy_handler", (ChannelHandler)ctx.proxyToServerConnection());
     }
 
     @Override
     public void messageReceive(IConnectionHandlerContext ctx, Object... objects) {
-        if (objects == null || objects.length == 0 || !(objects[0] instanceof HttpRequest)) {
+        if (objects == null || objects.length < 2) {
             return;
         }
-        HttpRequest httpRequest = (HttpRequest)objects[0];
-        if (ctx.proxyToServerConnection().getCurrentState() == ConnectionState.DISCONNECTED) {
-            SocksHttpProxyUtils.retainObject(httpRequest);
-            connectAndWrite(httpRequest);
-        } else {
-            ctx.proxyToServerConnection().resentHttpRequest(httpRequest);
+        if (objects[1] instanceof HttpRequest) {
+            HttpRequest httpRequest = (HttpRequest)objects[1];
+            if (ctx.proxyToServerConnection().getCurrentState() == ConnectionState.DISCONNECTED) {
+                SocksHttpProxyUtils.retainObject(httpRequest);
+                connectAndWrite(ctx, httpRequest);
+            } else {
+                ctx.proxyToServerConnection().resentHttpRequest(httpRequest);
+            }
+        } else if (objects[1] instanceof HttpObject) {
+            ctx.pipeline().fireReadHTTPChunk(objects[1]);
+        } else if (objects[1] instanceof ByteBuf) {
+            ctx.pipeline().fireReadRaw((ByteBuf)objects[1]);
         }
-        super.messageReceive(ctx, objects);
     }
 
     @Override
     public void proxyStateChange(IConnectionHandlerContext ctx, Object... objects) {
         super.proxyStateChange(ctx, objects);
+    }
+
+    @Override
+    public Future<InetSocketAddress> remoteInetSocketAddress(IConnectionHandlerContext ctx, Object ...object) {
+        String[] serverHostPortStrs = StringUtils.split(ctx.proxyToServerConnection().getServerHostAndPort(), ":");
+        String host = serverHostPortStrs[0];
+        int port = (serverHostPortStrs.length > 1 && serverHostPortStrs[1] != null) ? Integer.parseInt(serverHostPortStrs[1]): 80;
+        InetSocketAddress remoteAddress = new InetSocketAddress(host, port);
+        Future<InetSocketAddress> future = new ResultFuture<InetSocketAddress>(remoteAddress, true);
+        return future;
     }
 
     /** */
@@ -69,12 +87,7 @@ public class FlowProxyToServerConnectionHandler extends ProxyConnHandlerAdapter 
         switch (transportProtocol) {
             case TCP:
                 logger.debug("Connecting to server with TCP");
-
-//                cb.channelFactory(new ChannelFactory<Channel>() {
-//                    public Channel newChannel() {
-//                        return new NioSocketChannel();
-//                    }
-//                });
+                cb.channel(NioSocketChannel.class);
                 break;
             case UDT:
                 logger.debug("Connecting to server with UDT");
@@ -85,46 +98,34 @@ public class FlowProxyToServerConnectionHandler extends ProxyConnHandlerAdapter 
                 throw new UnknownTransportProtocolException(transportProtocol);
         }
 
-
+        cb.handler(new LoggingHandler(LogLevel.INFO));
         cb.handler(new ChannelInitializer<Channel>() {
             protected void initChannel(Channel ch) throws Exception {
                 ctx.pipeline().fireInitChannelPipeline(ch.pipeline(), IConnectionHandlerContext.CONNECTION_TYPE_PROXY);
             }
         });
         cb.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, ctx.pipeline().proxyServer().getConnectTimeout());
-        Future<InetSocketAddress> f = ctx.fireRemoteInetSocketAddress(initialHttpRequest);
+        Future<InetSocketAddress> f = ctx.pipeline().fireRemoteInetSocketAddress(null);
 
-        ctx.proxyToServerConnection().becomeState(ConnectionState.CONNECTING);
-        ctx.fireProxyStateChange(ctx, null);
+        ctx.proxyToServerConnection().becomeState(ConnectionState.CONNECTING);//        ctx.fireProxyStateChange(ctx, null);
         f.addListener(new GenericFutureListener<Future<InetSocketAddress>>() {
             public void operationComplete(Future future) throws Exception {
                 if (future.isSuccess()) {
                     InetSocketAddress remoteAddress = (InetSocketAddress) future.get();
                     ChannelFuture cf = cb.connect(remoteAddress);
+                    cf.addListener(new ChannelFutureListener() {
+                        public void operationComplete(ChannelFuture cbFuture) throws Exception {
+                            if (cbFuture.isSuccess()) {
+                                ctx.pipeline().fireServerConnectedSucc(cbFuture.cause());
+                            } else {
+                                ctx.pipeline().fireServerConnectedFail(cbFuture.cause());
+                            }
+                        }
+                    });
                 }
             }
         });
-
-
-//        execute(ctx, )
-//        this.connectionFlow = new ConnectionFlow(this, connectionLock, connectionLockCond)
-//                .then(CONNECTION_FLOW_CHANNEL);
-        //handle chain proxy  --begin
-        //handle chain proxy --end
-//        if (SocksHttpProxyUtils.isConnect(initialHttpRequest)) {
-////            handle isMitmEnabled
-//
-//            connectionFlow.then(thisConnection.StartTunneling)
-//                    .then(clientConnection.getRespondCONNECTSuccessful())
-//                    .then(clientConnection.getStartTunnelingFlowStep());
-//        }
-//        connectionFlow.start();
     }
-
-//    @Override
-//    protected Future<?> execute(TransportProtocol transportProtocol) {
-//
-//    }
 
     @Override
     public void readHTTPChunk(IConnectionHandlerContext ctx, Object ...chunk) {
@@ -132,7 +133,14 @@ public class FlowProxyToServerConnectionHandler extends ProxyConnHandlerAdapter 
 //            ctx.disconnectAll();
             return;
         }
-
+        if (chunk[0] instanceof HttpResponse) {
+            ctx.proxyToServerConnection().becomeState(ConnectionState.AWAITING_CHUNK);
+        } else if (chunk[0] instanceof HttpContent) {
+            HttpContent httpContent = (HttpContent) chunk[0];
+            if (httpContent instanceof LastHttpContent) {
+                logger.debug("last httpContent receive");
+            }
+        }
         ctx.fireReadHTTPChunk(chunk);
     }
 
@@ -143,6 +151,7 @@ public class FlowProxyToServerConnectionHandler extends ProxyConnHandlerAdapter 
 
     @Override
     public void serverConnectedSucc(IConnectionHandlerContext ctx, Object... objects) {
+        ctx.proxyToServerConnection().connectionSucceeded(true);
         super.serverConnectedSucc(ctx, objects);
     }
 

@@ -2,7 +2,6 @@ package org.siltools.sockshttp.proxy;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.http.HttpRequest;
 import io.netty.util.concurrent.Future;
 
 import java.lang.annotation.*;
@@ -14,13 +13,13 @@ public interface IConnectionHandler {
 
     void initChannelPipeline(IConnectionHandlerContext ctx, ChannelPipeline channelPipeline, int connectionType);
 
-    void messageReceive(IConnectionHandlerContext ctx, Object... objects);
+    void messageReceive(IConnectionHandlerContext ctx, Object ...objects);
 
-    void proxyStateChange(IConnectionHandlerContext ctx, Object... objects);
+    void proxyStateChange(IConnectionHandlerContext ctx, Object ...objects);
 
 //    void readHTTPInitial(IConnectionHandlerContext ctx, Object ...objects);
 
-    void readHTTPChunk(IConnectionHandlerContext ctx, Object... chunk);
+    void readHTTPChunk(IConnectionHandlerContext ctx, Object ...chunk);
 
     void readRaw(IConnectionHandlerContext ctx, ByteBuf buf);
 
@@ -36,9 +35,9 @@ public interface IConnectionHandler {
 //
 //    void disconnected(IConnectionHandlerContext ctx, Object object);
 
-    void serverConnectedSucc(IConnectionHandlerContext ctx, Object... object);
+    void serverConnectedSucc(IConnectionHandlerContext ctx, Object ...object);
 
-    void serverConnectedFail(IConnectionHandlerContext ctx, Object... objects);
+    void serverConnectedFail(IConnectionHandlerContext ctx, Object ...objects);
 
     void inboundExceptionCaught(IConnectionHandlerContext ctx, Throwable cause) throws Exception;
 
@@ -46,7 +45,7 @@ public interface IConnectionHandler {
 
     void clientConnectTimeout(IConnectionHandlerContext ctx, Throwable cause);
 
-    Future<InetSocketAddress> remoteInetSocketAddress(IConnectionHandlerContext ctx, HttpRequest httpRequest);
+    Future<InetSocketAddress> remoteInetSocketAddress(IConnectionHandlerContext ctx, Object ...objects);
 
     boolean shouldExecuteOnEventLoop(int stepFlag);
 

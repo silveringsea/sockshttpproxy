@@ -9,10 +9,7 @@ import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import org.siltools.sockshttp.def.ServerParams;
 import org.siltools.sockshttp.def.TransportProtocol;
-import org.siltools.sockshttp.proxy.ConnectionInitializer;
-import org.siltools.sockshttp.proxy.DefaultClientToProxyConnection;
-import org.siltools.sockshttp.proxy.IConnectionPipeline;
-import org.siltools.sockshttp.proxy.ServerGroup;
+import org.siltools.sockshttp.proxy.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -93,9 +90,9 @@ public class FlowSocksHttpProxyServer implements SocksHttpProxyServer {
     }
 
     private void addConnectionInitializer(ConnectionInitializer connectionInitializer) throws Exception {
-        FlowConnectionInitializer flowInitializer = queue.poll();
+        FlowConnectionInitializer flowInitializer = queue.take();
         flowInitializer.add(connectionInitializer);
-        queue.offer(flowInitializer);
+        queue.put(flowInitializer);
     }
 
     protected void doStart() {
@@ -160,7 +157,7 @@ public class FlowSocksHttpProxyServer implements SocksHttpProxyServer {
         stop();
     }
 
-    public static final class FlowConnectionInitializer {
+    public final class FlowConnectionInitializer {
 
         public ArrayBlockingQueue<ConnectionInitializer> queue = new ArrayBlockingQueue<ConnectionInitializer>(10);
 
@@ -170,7 +167,7 @@ public class FlowSocksHttpProxyServer implements SocksHttpProxyServer {
 
         public IConnectionPipeline getPipeline() throws Exception {
 
-            IConnectionPipeline pipeline = null;
+            IConnectionPipeline pipeline = new DefaultConnectionPipeline(FlowSocksHttpProxyServer.this);
             for (Iterator<ConnectionInitializer> iterator = queue.iterator(); iterator.hasNext();) {
                 pipeline = iterator.next().initPipline(pipeline);
             }
@@ -220,7 +217,6 @@ public class FlowSocksHttpProxyServer implements SocksHttpProxyServer {
             this.connectionInitializer = connectionInitializer;
             return this;
         }
-
 
         private FlowSocksHttpProxyServer build() {
             final ServerGroup serverGroup;

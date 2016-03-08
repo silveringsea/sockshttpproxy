@@ -1,8 +1,10 @@
 package org.siltools.sockshttp.proxy;
 
 import io.netty.channel.ChannelPipeline;
+import io.netty.util.concurrent.Future;
 import org.siltools.sockshttp.SocksHttpProxyServer;
 
+import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -193,23 +195,24 @@ public interface IConnectionPipeline extends Iterable<Map.Entry<String, IConnect
 
     IConnectionPipeline fireInitChannelPipeline(ChannelPipeline cp, int connectionType);
 
-    IConnectionPipeline fireProxyStateChange(Object... objects);
+    IConnectionPipeline fireProxyStateChange(Object ...objects);
 
-    IConnectionPipeline fireMessageReceive(Object... objects);
+    IConnectionPipeline fireMessageReceive(Object ...objects);
 
 //    IConnectionPipeline fireReadHTTPInitial(Object ...objects);
 
-    IConnectionPipeline fireReadHTTPChunk(Object... objects);
+    IConnectionPipeline fireReadHTTPChunk(Object ...objects);
 
-    IConnectionPipeline fireReadRaw(Object... objects);
+    IConnectionPipeline fireReadRaw(Object ...objects);
 
-    IConnectionPipeline fireServerConnectedSucc(Object... objects);
+    IConnectionPipeline fireServerConnectedSucc(Object ...objects);
 
-    IConnectionPipeline fireServerConnectedFail(Object... objects);
+    IConnectionPipeline fireServerConnectedFail(Object ...objects);
 //    IConnectionPipeline fireDisconnect(Object ...objects);
 
-    IConnectionPipeline fireClientConnectTimeout(Object... objects);
+    IConnectionPipeline fireClientConnectTimeout(Object ...objects);
 
+    Future<InetSocketAddress> fireRemoteInetSocketAddress(Object ...objects);
 //    IConnectionPipeline fireConnect(Object ...objects);
 
 

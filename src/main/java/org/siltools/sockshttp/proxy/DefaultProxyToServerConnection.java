@@ -87,43 +87,12 @@ public class DefaultProxyToServerConnection extends ProxyConnection<HttpResponse
 
         if (getCurrentState().isPartOfConnectionFlow() || getCurrentState().isDisconnectingOrDisconnected()) {
             // connect fail
-            LOG.error("asdfasdfa");
+            LOG.error("connect fail");
             return;
         }
 
         writeDataToChannel(httpRequest);
     }
-
-//    public Future startConnect(HttpRequest httpRequest) {
-//        Bootstrap bootstrap = new Bootstrap().group(proxyServer.getProxyToServerThreadPool(transportProtocol));
-//        switch (transportProtocol) {
-//            case TCP:
-//                bootstrap.channel(NioSocketChannel.class);
-//                break;
-//            case UDT:
-//                bootstrap.channel(NioUdtByteConnectorChannel.class).option(ChannelOption.SO_REUSEADDR, true);
-//            default:
-//                throw new UnknownTransportProtocolException(transportProtocol);
-//        }
-//        bootstrap.handler(new ChannelInitializer<Channel>() {
-//            @Override
-//            protected void initChannel(Channel ch) throws Exception {
-//                initChannelPipeline(ch.pipeline());
-//            }
-//        })
-//                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, proxyServer.getConnectTimeout());
-//        final Future future =  bootstrap.connect(remoteAddress);
-//        return future;
-////        future.addListener(new GenericFutureListener<Future>() {
-////            public void operationComplete(Future future) throws Exception {
-////                if (future.isSuccess()) {
-////                    connectionSucceeded(false);
-////                } else {
-////
-////                }
-////            }
-////        });
-//    }
 
     protected ConnectionState readHTTPInitial(HttpResponse httpResponse) {
         LOG.debug("Received raw response: {}", httpResponse);

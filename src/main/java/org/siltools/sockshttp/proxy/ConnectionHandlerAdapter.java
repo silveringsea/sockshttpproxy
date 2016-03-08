@@ -2,7 +2,6 @@ package org.siltools.sockshttp.proxy;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.http.HttpRequest;
 import io.netty.util.concurrent.Future;
 
 import java.net.InetSocketAddress;
@@ -22,8 +21,8 @@ public abstract class ConnectionHandlerAdapter implements IConnectionHandler {
     public void initChannelPipeline(IConnectionHandlerContext ctx, ChannelPipeline channelPipeline, int connectionType) {
         if (connectionType == connectionType()) {
             initChannelPipeline(ctx, channelPipeline);
-            ctx.fireInitChannelPipeline(channelPipeline, connectionType);
         }
+        ctx.fireInitChannelPipeline(channelPipeline, connectionType);
     }
 
     public void initChannelPipeline(IConnectionHandlerContext ctx, ChannelPipeline channelPipeline) {
@@ -85,8 +84,8 @@ public abstract class ConnectionHandlerAdapter implements IConnectionHandler {
     }
 
     @Skip
-    public Future<InetSocketAddress> remoteInetSocketAddress(IConnectionHandlerContext ctx, HttpRequest httpRequest) {
-        return ctx.fireRemoteInetSocketAddress(httpRequest);
+    public Future<InetSocketAddress> remoteInetSocketAddress(IConnectionHandlerContext ctx, Object ...objects) {
+        return ctx.fireRemoteInetSocketAddress(objects);
     }
 
     public String getName() {

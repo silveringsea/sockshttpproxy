@@ -1,4 +1,4 @@
-package org.siltools.sockshttp;//package org.siltools.sockshttp;
+//package org.siltools.sockshttp;
 //
 //import io.netty.bootstrap.ServerBootstrap;
 //import io.netty.channel.*;

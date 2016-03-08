@@ -18,6 +18,11 @@ public class StopProxyCommand extends AbstractCliCommand {
 
     @Override
     public boolean exec() throws Exception {
-        return false;
+        if (socksHttpProxyServer == null) {
+            System.out.println("socksHttpProxyServer donot exists");
+            return false;
+        }
+        socksHttpProxyServer.shutdown();
+        return true;
     }
 }

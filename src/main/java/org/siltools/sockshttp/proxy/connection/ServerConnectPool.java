@@ -24,11 +24,11 @@ public enum ServerConnectPool {
     private static final Map<String, IProxyConnection> serverConnectionsByHostAndPort = new ConcurrentHashMap<String, IProxyConnection>();
 
     public synchronized IProxyConnection get(String hostAndPort) {
-        return serverConnectionsByHostAndPort.get(hostAndPort);
+        return null;// serverConnectionsByHostAndPort.get(hostAndPort);
     }
 
     public synchronized void put(String hostAndPort, IProxyConnection connection) {
-        serverConnectionsByHostAndPort.put(hostAndPort, connection);
+        //serverConnectionsByHostAndPort.put(hostAndPort, connection);
     }
 
     public synchronized void remove(String hostAndPort) {

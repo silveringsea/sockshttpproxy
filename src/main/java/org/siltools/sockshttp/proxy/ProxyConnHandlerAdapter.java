@@ -1,7 +1,5 @@
 package org.siltools.sockshttp.proxy;
 
-import io.netty.handler.codec.http.HttpRequest;
-
 import java.net.InetSocketAddress;
 
 /**
@@ -10,10 +8,6 @@ import java.net.InetSocketAddress;
 public class ProxyConnHandlerAdapter extends ConnectionHandlerAdapter {
     public int connectionType() {
         return IConnectionHandlerContext.CONNECTION_TYPE_PROXY;
-    }
-
-    public void connectAndWrite(final HttpRequest initialHttpRequest) {
-
     }
 
     public InetSocketAddress setupConnectionAddress() {

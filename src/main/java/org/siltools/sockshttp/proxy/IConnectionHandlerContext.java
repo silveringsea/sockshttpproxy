@@ -3,7 +3,6 @@ package org.siltools.sockshttp.proxy;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.http.HttpRequest;
 import io.netty.util.concurrent.Future;
 
 import java.net.InetSocketAddress;
@@ -15,12 +14,16 @@ public interface IConnectionHandlerContext {
 
     public static final int MASK_IN_EXCEPTION_CAUGHT = 1 << 2;
     public static final int MASK_CONN_MESSAGERECEIVE = 1 << 3;
-    public static final int MASK_CONN_READ_HTTPINITIAL = 1 << 4;
+    public static final int MASK_CONN_INIT_CHANNEL_PIPELINE = 1 << 4;
     public static final int MASK_CONN_PROXYSTATE_CHG = 1 << 5;
+    public static final int MASK_CONN_CLIENT_CONNECT_TIMEOUT = 1 << 6;
+    public static final int MASK_CONN_SERVER_CONNSUC = 1 << 7;
+    public static final int MASK_CONN_SERVER_CONNFAIL = 1 << 8;
+    public static final int MASK_CONN_REMOTE_INTNETADDRESS = 1 << 9;
 
     public static final int MASK_CONN_READ_HTTPCHUNK = 1 << 11;
     public static final int MASK_CONN_READ_RAW = 1 << 12;
-    public static final int MASK_CONN_PROXY_AUTHENTICATION = 1 << 13;
+//    public static final int MASK_CONN_PROXY_AUTHENTICATION = 1 << 13;
     public static final int MASK_OUT_EXCEPTION_CAUGHT = 1 << 14;
 
     public static final int CONNECTION_TYPE_CLIENT = 1;
@@ -63,7 +66,7 @@ public interface IConnectionHandlerContext {
      * method called of the next {@link IConnectionHandler} contained in the {@link IConnectionPipeline} of the
      * {@link IProxyConnection}.
      */
-    IConnectionHandlerContext fireMessageReceive(Object... objects);
+    IConnectionHandlerContext fireMessageReceive(Object ...objects);
 
     /**
      * A {@link IConnectionHandlerContext}
@@ -72,7 +75,7 @@ public interface IConnectionHandlerContext {
      * method called of the next {@link IConnectionHandler} contained in the {@link IConnectionPipeline} of the
      * {@link IProxyConnection}.
      */
-    IConnectionHandlerContext fireProxyStateChange(Object... objects);
+    IConnectionHandlerContext fireProxyStateChange(Object ...objects);
     /**
      * A {@link IConnectionHandlerContext}
      *
@@ -89,7 +92,7 @@ public interface IConnectionHandlerContext {
      * called of the next {@link IConnectionHandler} contained in the {@link IConnectionPipeline} of the
      * {@link IProxyConnection}.
      */
-    IConnectionHandlerContext fireReadHTTPChunk(Object... objects);
+    IConnectionHandlerContext fireReadHTTPChunk(Object ...objects);
 
     /**
      * A {@link IConnectionHandlerContext}
@@ -143,7 +146,7 @@ public interface IConnectionHandlerContext {
      * method called of the next {@link IConnectionHandler} contained in the {@link IConnectionPipeline} of the
      * {@link IProxyConnection}.
      */
-    IConnectionHandlerContext fireServerConnectedSucc(Object... objects);
+    IConnectionHandlerContext fireServerConnectedSucc(Object ...objects);
 
 
     /**
@@ -153,7 +156,7 @@ public interface IConnectionHandlerContext {
      * method called of the next {@link IConnectionHandler} contained in the {@link IConnectionPipeline} of the
      * {@link IProxyConnection}.
      */
-    IConnectionHandlerContext fireServerConnectedFail(Object... object);
+    IConnectionHandlerContext fireServerConnectedFail(Object ...object);
     /**
      * A {@link IProxyConnection} received an {@link Throwable} in one of its inbound operations.
      *
@@ -167,5 +170,5 @@ public interface IConnectionHandlerContext {
 
     IConnectionHandlerContext fireClientConnectTimeout(Object objects);
 
-    Future<InetSocketAddress> fireRemoteInetSocketAddress(final HttpRequest initialHttpRequest);
+    Future<InetSocketAddress> fireRemoteInetSocketAddress(Object ...objects);
 }

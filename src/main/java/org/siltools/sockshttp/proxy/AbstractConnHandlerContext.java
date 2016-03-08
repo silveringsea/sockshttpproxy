@@ -3,7 +3,7 @@ package org.siltools.sockshttp.proxy;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.http.HttpRequest;
+import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.Future;
 
 import java.net.InetSocketAddress;
@@ -21,16 +21,25 @@ public abstract class AbstractConnHandlerContext implements IConnectionHandlerCo
     final String name;
     private static final int MASK_INBOUND = MASK_IN_EXCEPTION_CAUGHT |
             MASK_CONN_MESSAGERECEIVE |
-            MASK_CONN_PROXYSTATE_CHG;
+            MASK_CONN_PROXYSTATE_CHG |
+            MASK_CONN_REMOTE_INTNETADDRESS;
 
     private static final int MASK_OUTBOUND = MASK_OUT_EXCEPTION_CAUGHT |
             MASK_CONN_READ_HTTPCHUNK |
             MASK_CONN_READ_RAW |
-            MASK_CONN_PROXY_AUTHENTICATION ;
+            MASK_CONN_SERVER_CONNSUC |
+            MASK_CONN_SERVER_CONNFAIL;
+    //|
+     //       MASK_CONN_PROXY_AUTHENTICATION ;
 
     final int skipFlags;
-    protected static ThreadLocal<WeakHashMap<Class<?>, Integer>> skipFlagsCache
-            = new ThreadLocal<WeakHashMap<Class<?>, Integer>>();
+    protected static FastThreadLocal<WeakHashMap<Class<?>, Integer>> skipFlagsCache
+            = new FastThreadLocal<WeakHashMap<Class<?>, Integer>>() {
+        @Override
+        protected WeakHashMap<Class<?>, Integer> initialValue() throws Exception {
+            return new WeakHashMap<Class<?>, Integer>();
+        }
+    };
 
     protected AbstractConnHandlerContext(DefaultConnectionPipeline pipeline,
                                          String name, int skipFlags) {
@@ -93,21 +102,37 @@ public abstract class AbstractConnHandlerContext implements IConnectionHandlerCo
     static int skipFlags0(Class<? extends IConnectionHandler> handlerType) {
         int flags = 0;
         try {
-            if (isSkippable(handlerType, "exceptionCaught", Throwable.class)) {
+            if (isSkippable(handlerType, "inboundExceptionCaught", Throwable.class)) {
                 flags |= MASK_IN_EXCEPTION_CAUGHT;
             }
-            if (isSkippable(handlerType, "readHTTPInitial", Object.class)) {
-                flags |= MASK_CONN_READ_HTTPINITIAL;
+            if (isSkippable(handlerType, "initChannelPipeline", ChannelPipeline.class, int.class)) {
+                flags |= MASK_CONN_INIT_CHANNEL_PIPELINE;
             }
-            if (isSkippable(handlerType, "readHTTPChunk", Object.class)) {
+            if (isSkippable(handlerType, "proxyStateChange", Object[].class)) {
+                flags |= MASK_CONN_PROXYSTATE_CHG;
+            }
+
+            if (isSkippable(handlerType, "clientConnectTimeout", Throwable.class)) {
+                flags |= MASK_CONN_CLIENT_CONNECT_TIMEOUT;
+            }
+            if (isSkippable(handlerType, "serverConnectedSucc", Object[].class)) {
+                flags |= MASK_CONN_SERVER_CONNSUC;
+            }
+            if (isSkippable(handlerType, "serverConnectedFail", Object[].class)) {
+                flags |= MASK_CONN_SERVER_CONNFAIL;
+            }
+            if (isSkippable(handlerType, "readHTTPChunk", Object[].class)) {
                 flags |= MASK_CONN_READ_HTTPCHUNK;
             }
-            if (isSkippable(handlerType, "readRaw", Object.class)) {
+            if (isSkippable(handlerType, "readRaw", ByteBuf.class)) {
                 flags |= MASK_CONN_READ_RAW;
             }
-            if (isSkippable(handlerType, "proxyAuthentication", Object.class)) {
-                flags |= MASK_CONN_PROXY_AUTHENTICATION;
+            if (isSkippable(handlerType, "remoteInetSocketAddress", Object[].class)) {
+                flags |= MASK_CONN_REMOTE_INTNETADDRESS;
             }
+//            if (isSkippable(handlerType, "proxyAuthentication", Object.class)) {
+//                flags |= MASK_CONN_PROXY_AUTHENTICATION;
+//            }
         } catch (Exception e) {
             // Should never reach here.
             throw new RuntimeException("skipFlags0", e);
@@ -124,7 +149,23 @@ public abstract class AbstractConnHandlerContext implements IConnectionHandlerCo
         return ctx;
     }
 
+    private AbstractConnHandlerContext findContextInbound(int maskFlag) {
+        AbstractConnHandlerContext ctx = this;
+        do {
+            ctx = ctx.next;
+        } while ((ctx.skipFlags & maskFlag) == maskFlag);
+        return ctx;
+    }
+
     private AbstractConnHandlerContext findContextOutbound() {
+        AbstractConnHandlerContext ctx = this;
+        do {
+            ctx = ctx.prev;
+        } while ((ctx.skipFlags & MASK_OUTBOUND) == MASK_OUTBOUND);
+        return ctx;
+    }
+
+    private AbstractConnHandlerContext findContextOutbound(int maskFlag) {
         AbstractConnHandlerContext ctx = this;
         do {
             ctx = ctx.prev;
@@ -171,7 +212,7 @@ public abstract class AbstractConnHandlerContext implements IConnectionHandlerCo
                 }
             });
         }
-        handler.messageReceive(ctx, objects);
+        handler.proxyStateChange(ctx, objects);
         return this;
     }
 
@@ -188,11 +229,11 @@ public abstract class AbstractConnHandlerContext implements IConnectionHandlerCo
         if (handler.shouldExecuteOnEventLoop(MASK_CONN_READ_HTTPCHUNK)) {
             ctx.connection().submitChannelTask(new Runnable() {
                 public void run() {
-                    handler.proxyStateChange(ctx, objects);
+                    handler.readHTTPChunk(ctx, objects);
                 }
             });
         }
-        handler.proxyStateChange(ctx, objects);
+        handler.readHTTPChunk(ctx, objects);
         return this;
     }
 
@@ -231,43 +272,9 @@ public abstract class AbstractConnHandlerContext implements IConnectionHandlerCo
         return this;
     }
 
-
-    public Future<InetSocketAddress> fireRemoteInetSocketAddress(HttpRequest initialHttpRequest) {
+    public Future<InetSocketAddress> fireRemoteInetSocketAddress(Object ...objects) {
         final AbstractConnHandlerContext ctx = findContextInbound();
         final IConnectionHandler handler = ctx.handler();
-        return handler.remoteInetSocketAddress(ctx, initialHttpRequest);
+        return handler.remoteInetSocketAddress(ctx, objects);
     }
-//    void doProcessCurrentStep(ContextStep currentStep) {
-//        currentStep.execute().addListener(
-//                new GenericFutureListener<Future<?>>() {
-//                    public void operationComplete(
-//                            io.netty.util.concurrent.Future<?> future)
-//                            throws Exception {
-//                        synchronized (connectLock) {
-//                            if (future.isSuccess()) {
-//
-//                            } else {
-////                                LOG.debug("ConnectionFlowStep failed",
-////                                        future.cause());
-////                                fail(future.cause());
-//                            }
-//                        }
-//                    };
-//                });
-//    }
-
-//    public static abstract class ConnHandlerCallback {
-//        IProxyConnection connection;
-//        ConnectionState state;
-//
-//        ConnHandlerCallback(AbstractConnHandlerContext ctx, ConnectionState state) {
-//            super();
-//            this.connection = connection;
-//            this.state = state;
-//        }
-//
-//        abstract Future execute();
-//
-//        abstract void onExecuteEnd();
-//    }
 }
